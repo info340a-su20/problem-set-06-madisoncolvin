@@ -1,8 +1,13 @@
+/* Madison Colvin */
+
 'use strict';
 
 //An example of the response from searching for music on iTunes. Contains a
 //`results` property that is an array of objects representing individual songs
-const EXAMPLE_SEARCH_RESULTS = {results:[{
+// Note to self: came with original javascript dont modify
+
+const EXAMPLE_SEARCH_RESULTS = {
+  results: [{
     artistName: "Queen",
     trackName: "Bohemian Rhapsody",
     previewUrl: "https://audio-ssl.itunes.apple.com/apple-assets-us-std-000001/Music3/v4/41/cc/ae/41ccae59-697a-414c-43b5-51bd4d88d535/mzaf_3150742134610995145.plus.aac.p.m4a",
@@ -17,7 +22,8 @@ const EXAMPLE_SEARCH_RESULTS = {results:[{
     trackName: "Formation",
     previewUrl: "https://audio-ssl.itunes.apple.com/apple-assets-us-std-000001/AudioPreview122/v4/5f/d7/5f/5fd75fd8-d0a5-ccb2-7822-bcaedee070fc/mzaf_3356445145838692600.plus.aac.p.m4a",
     artworkUrl100: "http://is1.mzstatic.com/image/thumb/Music20/v4/23/c1/9e/23c19e53-783f-ae47-7212-03cc9998bd84/source/100x100bb.jpg",
-}]};
+  }]
+};
 
 
 //For practice, define a function `renderTrack()` that takes as an argument an
@@ -34,6 +40,18 @@ const EXAMPLE_SEARCH_RESULTS = {results:[{
 //You can test this function by passing it one of the above array items
 //(e.g., `EXAMPLE_SEARCH_RESULTS.results[0]).
 
+function renderTrack(singleSong) {
+  let track = document.createElement("img");
+
+  track.title = singleSong.trackName;
+  track.alt = singleSong.trackName;
+  track.src = singleSong.artworkUrl100;
+
+  let albumCover = document.querySelector("#records");
+  albumCover.append(track);
+}
+//test
+renderTrack(EXAMPLE_SEARCH_RESULTS.results[0]);
 
 
 //Define a function `renderSearchResults()` that takes in an object with a
@@ -44,13 +62,26 @@ const EXAMPLE_SEARCH_RESULTS = {results:[{
 //"clear" the previously displayed results first!
 //
 //You can test this function by passing it the `EXAMPLE_SEARCH_RESULTS` object.
+function renderSearchResults(resultsObject) {
+  document.querySelector("#records").innerHTML = '';
+  //modified based on later instructions
+  if (resultsObject.results.length === 0) {
+    renderError(new Error("No results found"));
+  }
+  for (let i = 0; i < resultsObject.results.length; i++) {
+    renderTrack(resultsObject.results[i]);
+  }
+}
 
-
+//test
+//renderSearchResults(EXAMPLE_SEARCH_RESULTS);
 
 //Now it's the time to practice using `fetch()`! First, modify the `index.html`
 //file to load the polyfills for _BOTH_ the fetch() function and Promises, so
 //that your example will work on Internet Explorer.
 //Use version 2.0.4 of the `fetch` polyfill.
+
+//Libraries added
 
 
 //Define a function `fetchTrackList()` that takes in a "search term" string as a
@@ -67,9 +98,32 @@ const EXAMPLE_SEARCH_RESULTS = {results:[{
 //
 //You can test this function by calling the method and passing it the name of 
 //your favorite band (you CANNOT test it with the search button yet!)
+
+// Note to self: came with original javascript dont modify
 const URL_TEMPLATE = "https://itunes.apple.com/search?entity=song&limit=25&term={searchTerm}";
 
-
+function fetchTrackList(searchTerm) {
+  // Modified: spinner toggled
+  toggleSpinner();
+  //url template substrings url
+  let searchedUrl = URL_TEMPLATE.substring(0, 58) + searchTerm;
+  let promise = fetch(searchedUrl)
+    .then(function(response) {
+      return response.json();
+    })
+    .then(function(data) {
+      renderSearchResults(data);
+    })
+    // Modified: renders the error if one occurs in downloading or parsing
+    .catch(function(error) {
+      renderError(error);
+    })
+    // Modified: spinner toggled
+    .then(function() {
+      toggleSpinner();
+    });
+  return promise;
+}
 
 
 //Add an event listener to the "search" button so that when it is clicked (and 
@@ -77,6 +131,12 @@ const URL_TEMPLATE = "https://itunes.apple.com/search?entity=song&limit=25&term=
 //user-entered `#searchQuery` value. Use the `preventDefault()` function to keep
 //the form from being submitted as usual (and navigating to a different page).
 
+let form = document.querySelector("form");
+form.addEventListener("submit", function(event) {
+  event.preventDefault();
+  let search = document.querySelector("#searchQuery");
+  fetchTrackList(search.value);
+});
 
 
 //Next, add some error handling to the page. Define a function `renderError()`
@@ -84,7 +144,16 @@ const URL_TEMPLATE = "https://itunes.apple.com/search?entity=song&limit=25&term=
 //on the page. Display this by creating a `<p class="alert alert-danger">` and
 //placing that alert inside the `#records` element.
 
-
+function renderError(errorObject) {
+  //DOM
+  let alert = document.createElement("p");
+  alert.classList.add("alert");
+  alert.classList.add("alert-danger");
+  //error message
+  alert.textContent = errorObject.message;
+  //places alear inside records element
+  document.querySelector("#records").appendChild(alert);
+}
 
 //Add the error handing to your program in two ways:
 //(1) Add a `.catch()` callback to the AJAX call in `fetchTrackList()` that
@@ -108,7 +177,11 @@ const URL_TEMPLATE = "https://itunes.apple.com/search?entity=song&limit=25&term=
 //after the ENTIRE request is completed (including after any error catching---
 //download the data and `catch()` the error, and `then()` show the spinner.
 
-
+// fetchTrackList() modified to account for spinner toggle
+function toggleSpinner() {
+  let spinner = document.querySelector(".fa-spinner");
+  spinner.classList.toggle("d-none");
+}
 
 
 //Optional extra: add the ability to "play" each track listing by clicking
@@ -119,12 +192,14 @@ const URL_TEMPLATE = "https://itunes.apple.com/search?entity=song&limit=25&term=
 //(This is provided for you as an example; take some time to read through the
 //code logic to understand how this works.
 
-const state = { previewAudio: new Audio() };
+const state = {
+  previewAudio: new Audio()
+};
 
 //Plays the given track, spinning the given image.
 function playTrackPreview(track, img) {
-  if(state.previewAudio.src !== track.previewUrl){ //if a new track to play
-    document.querySelectorAll('img').forEach(function(element){
+  if (state.previewAudio.src !== track.previewUrl) { //if a new track to play
+    document.querySelectorAll('img').forEach(function(element) {
       element.classList.remove('fa-spin');
     }); //stop whoever else is spinning
 
@@ -132,9 +207,8 @@ function playTrackPreview(track, img) {
     state.previewAudio = new Audio(track.previewUrl); //create new audio
     state.previewAudio.play(); //play new
     img.classList.add('fa-spin'); //start the spinning
-  } 
-  else {
-    if(state.previewAudio.paused){ 
+  } else {
+    if (state.previewAudio.paused) {
       state.previewAudio.play();
     } else {
       state.previewAudio.pause();
@@ -144,16 +218,16 @@ function playTrackPreview(track, img) {
 }
 
 //Make functions and variables available to tester. DO NOT MODIFY THIS.
-if(typeof module !== 'undefined' && module.exports){
+if (typeof module !== 'undefined' && module.exports) {
   /* eslint-disable */
   module.exports.EXAMPLE_SEARCH_RESULTS = EXAMPLE_SEARCH_RESULTS;
-  if(typeof renderTrack !== 'undefined') 
+  if (typeof renderTrack !== 'undefined')
     module.exports.renderTrack = renderTrack;
-  if(typeof renderSearchResults !== 'undefined') 
+  if (typeof renderSearchResults !== 'undefined')
     module.exports.renderSearchResults = renderSearchResults;
-  if(typeof fetchTrackList !== 'undefined') 
+  if (typeof fetchTrackList !== 'undefined')
     module.exports.fetchTrackList = fetchTrackList;
-  if(typeof toggleSpinner !== 'undefined') 
+  if (typeof toggleSpinner !== 'undefined')
     module.exports.toggleSpinner = toggleSpinner;
-  module.exports.playTrackPreview = playTrackPreview;    
+  module.exports.playTrackPreview = playTrackPreview;
 }
